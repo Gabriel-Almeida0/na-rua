@@ -1,0 +1,12 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Rascunhos locais que não entram na documentação publicada
+/rascunhos/
+*.local.md
