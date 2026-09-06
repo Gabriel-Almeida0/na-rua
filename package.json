@@ -1,0 +1,25 @@
+{
+  "name": "na-rua",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:logs": "docker compose -f infra/docker-compose.yml logs -f postgres",
+    "dev:api": "pnpm --filter @na-rua/api dev",
+    "dev:web": "pnpm --filter @na-rua/web dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
+  },
+  "packageManager": "pnpm@12.3.4"
+}

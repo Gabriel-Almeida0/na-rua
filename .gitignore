@@ -7,6 +7,26 @@ Thumbs.db
 .idea/
 *.swp
 
+# Dependências e build
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Testes e ferramentas
+coverage/
+.playwright-mcp/
+test-results/
+playwright-report/
+
 # Rascunhos locais que não entram na documentação publicada
 /rascunhos/
 *.local.md
+
+# pnpm
+.pnpm-store/

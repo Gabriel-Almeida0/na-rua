@@ -1,0 +1,31 @@
+# Nome explícito do projeto. Sem isso o Compose usa o nome da pasta ("infra"),
+# que colide com outros projetos que também guardam o compose em infra/.
+name: na-rua
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    image: na-rua/postgres:17-pgtap
+    container_name: na-rua-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: narua
+      POSTGRES_PASSWORD: narua_dev
+      POSTGRES_DB: narua
+      # Sem LANG customizado: pt_BR.utf8 não existe na imagem e quebra o initdb.
+      # A ordenação pt-BR é resolvida por collation ICU no schema (ver initdb).
+    ports:
+      - "54329:5432"   # porta alta para não colidir com outro Postgres local
+    volumes:
+      - narua-pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U narua -d narua"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  narua-pgdata:

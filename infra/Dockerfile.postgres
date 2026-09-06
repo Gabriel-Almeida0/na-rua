@@ -1,0 +1,7 @@
+FROM postgres:17
+
+# pgTAP: framework de testes rodando dentro do Postgres.
+# É como a suíte de RLS valida isolamento entre lojas (ADR-0009).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-17-pgtap \
+ && rm -rf /var/lib/apt/lists/*
