@@ -1,0 +1,130 @@
+# =============================================================================
+# CI do Na Rua
+#
+# O repositório é público, então o Actions é grátis e ilimitado nos runners
+# padrão (ADR-0022). Não há motivo para economizar minuto: a suíte completa
+# roda em todo push e em todo pull request.
+#
+# Ordem: o que é barato e pega mais bug vem primeiro. Typecheck e testes de
+# domínio (Vitest) rodam antes de subir banco nenhum; só depois vem o Postgres
+# com pgTAP, que é o passo caro.
+# =============================================================================
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Push seguido de push na mesma branch: cancela o anterior.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Corepack não pode ficar esperando confirmação interativa para baixar o pnpm
+  # fixado em packageManager.
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # As mesmas credenciais do infra/docker-compose.yml. São de desenvolvimento,
+  # ficam no repositório de propósito e não valem nada fora daqui.
+  DATABASE_URL: postgres://narua_app:narua_app_dev@localhost:54329/narua
+  DATABASE_URL_MIGRATOR: postgres://narua:narua_dev@localhost:54329/narua
+
+jobs:
+  ci:
+    name: typecheck · vitest · pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # O Node vem do .nvmrc, para o CI e a máquina do dev nunca divergirem.
+      # Vitest 5 exige Node >= 22.12.0.
+      - name: Node (versão do .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # O projeto usa pnpm, com a versão fixada no campo packageManager do
+      # package.json da raiz. Corepack lê esse campo e instala exatamente ela —
+      # por isso não existe um "npm install -g pnpm" aqui.
+      - name: Habilitar corepack (pnpm do campo packageManager)
+        run: |
+          corepack enable
+          pnpm --version
+
+      # ----------------------------------------------------------------------
+      # Cache do store do pnpm. O store é global e endereçado por conteúdo, o
+      # que faz a chave ser o lockfile e nada mais.
+      # ----------------------------------------------------------------------
+      - name: Descobrir o caminho do store do pnpm
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache do store do pnpm
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      # Domínio puro: Centavos, cálculo de saldo, encargos. Roda sem banco.
+      - name: Testes de domínio (Vitest)
+        run: pnpm -r test
+
+      # ----------------------------------------------------------------------
+      # Postgres com pgTAP.
+      #
+      # Por que NÃO usar `services:` com a imagem postgres:17: o bloco services
+      # só sabe puxar uma imagem pronta, não sabe construir uma — e pgTAP não
+      # vem na imagem oficial. Sem a extensão, toda a suíte de RLS morre no
+      # primeiro `select plan(...)`.
+      #
+      # A saída é subir o mesmo compose que o dev usa na máquina dele, que
+      # constrói infra/Dockerfile.postgres (postgres:17 + postgresql-17-pgtap).
+      # Ganho colateral: CI e dev rodam bit a bit o mesmo banco, mesma porta
+      # (54329), mesmo initdb — o papel narua_app, a extensão pgtap e a
+      # collation pt_br entram pelo mesmo caminho nos dois lugares.
+      #
+      # --wait segura o step até o healthcheck do compose ficar verde, então
+      # não existe sleep arbitrário aqui.
+      # ----------------------------------------------------------------------
+      - name: Subir Postgres 17 com pgTAP
+        run: docker compose -f infra/docker-compose.yml up -d --build --wait
+
+      - name: Conferir que a extensão pgtap subiu
+        run: |
+          docker exec na-rua-db psql -U narua -d narua -X -t -A \
+            -c "select extname || ' ' || extversion from pg_extension where extname = 'pgtap'"
+
+      # Três estágios, nesta ordem: bootstrap (schema private e a função de
+      # papel) -> migrations do drizzle -> hardening (grants, triggers, FORCE
+      # RLS, views). Roda com o papel migrator, nunca com o da aplicação.
+      - name: Aplicar as migrations
+        working-directory: apps/api
+        run: node --experimental-strip-types src/db/migrate.ts
+
+      # A suíte inegociável: isolamento por tenant, papéis, append-only e as
+      # invariantes do ledger. Cada arquivo termina em ROLLBACK, então o banco
+      # sai daqui do jeito que entrou.
+      - name: Suíte pgTAP (RLS, papéis, append-only, invariantes)
+        run: bash apps/api/tests/run.sh
+
+      - name: Logs do Postgres (só quando algo falha)
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml logs --no-color postgres
+
+      - name: Derrubar o banco
+        if: always()
+        run: docker compose -f infra/docker-compose.yml down -v

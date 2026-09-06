@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/*
+  Tokens do design system. Ver docs/02-ux/04-design-system.md.
+
+  Duas escolhas que contrariam o instinto e vêm da pesquisa de campo:
+
+  1. Denso e colorido, não branco e minimalista. A pesquisa do Google Next
+     Billion Users encontrou rejeição a espaço em branco e cores apagadas.
+  2. Preto real sobre branco real. Sob sol forte, um LCD de 200 nits com 300:1
+     no escuro cai para menos de 2:1 — cinza claro simplesmente some na porta
+     da loja.
+
+  Fonte web: 0 KB. Em 4G ruim é FOIT garantido, sem ganho num app utilitário.
+*/
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+
+  --color-tinta: #111111;
+  --color-tinta-fraca: #4a4a4a;
+  --color-fundo: #ffffff;
+  --color-fundo-tela: #f4f4f5;
+  --color-borda: #d4d4d8;
+
+  --color-atrasado: #c62828;
+  --color-atrasado-bg: #ffebee;
+  --color-atencao: #b45309;
+  --color-atencao-bg: #fff8e1;
+  --color-pago: #1b5e20;
+  --color-pago-bg: #e8f5e9;
+  --color-neutro: #52525b;
+
+  /* Cores opostas e inconfundíveis: confundir débito com crédito é erro
+     documentado no mercado, e custa dinheiro real. */
+  --color-fiado: #c62828;
+  --color-receber: #1b5e20;
+  --color-marca: #0b5fff;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-fundo-tela);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-tinta);
+  /* Nunca menor que 16px: evita o zoom automático do iOS em campo de texto. */
+  font-size: 16px;
+  margin: 0;
+  overscroll-behavior-y: contain;
+}
+
+/* Alvos de toque: mínimo 48dp, primários 56–64dp. */
+button,
+[role="button"] {
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

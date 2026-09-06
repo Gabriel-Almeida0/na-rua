@@ -6,7 +6,7 @@
  * Fastify (como autoridade). Se as duas divergirem, o dinheiro está errado.
  */
 
-import { type Centavos, ZERO, centavos, ehPositivo } from "./centavos.js";
+import { type Centavos, ZERO, centavos, ehPositivo } from "./centavos.ts";
 
 export type Direcao = "debito" | "credito";
 

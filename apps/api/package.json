@@ -10,8 +10,10 @@
     "db:migrate": "node --experimental-strip-types src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run --passWithNoTests",
+    "test:db": "bash tests/run.sh",
     "typecheck": "tsc --noEmit",
-    "e2e": "node e2e/fluxo-completo.mjs"
+    "e2e": "node e2e/fluxo-completo.mjs",
+    "db:migrate:auth": "node --experimental-strip-types src/db/migrar-auth.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

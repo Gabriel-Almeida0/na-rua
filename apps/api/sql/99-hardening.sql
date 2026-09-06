@@ -167,13 +167,5 @@ $$;
 revoke all on function private.criar_loja(text, text, text, text, smallint, text) from public;
 grant execute on function private.criar_loja(text, text, text, text, smallint, text) to narua_app;
 
--- Gerenciar equipe: o dono pode adicionar e remover membros da própria loja.
-drop policy if exists store_members_insert on public.store_members;
-create policy store_members_insert on public.store_members
-  for insert to narua_app
-  with check ((select private.has_store_role(store_id, 'dono')));
-
-drop policy if exists store_members_delete on public.store_members;
-create policy store_members_delete on public.store_members
-  for delete to narua_app
-  using ((select private.has_store_role(store_id, 'dono')));
+-- (As policies de escrita em store_members vivem no schema Drizzle, junto da
+--  tabela — ver src/db/schema/dominio.ts.)

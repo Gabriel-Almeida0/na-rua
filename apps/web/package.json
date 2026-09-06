@@ -1,0 +1,33 @@
+{
+  "name": "@na-rua/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build --webpack && node scripts/orcamento.mjs",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "orcamento": "node scripts/orcamento.mjs"
+  },
+  "dependencies": {
+    "@na-rua/dominio": "workspace:*",
+    "@serwist/next": "^9.5.12",
+    "@serwist/turbopack": "^9.5.12",
+    "dexie": "^4.4.5",
+    "dexie-react-hooks": "^4.2.0",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "serwist": "^9.5.12",
+    "ulid": "^3.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
+  }
+}

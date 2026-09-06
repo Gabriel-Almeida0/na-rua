@@ -2,12 +2,22 @@ packages:
   - "apps/*"
   - "packages/*"
 
-# O pnpm bloqueia postinstall de dependência por padrão — bom default.
+# O pnpm bloqueia postinstall de dependência por padrão — bom default, porque
+# postinstall é o vetor clássico de pacote comprometido.
 # O esbuild precisa do dele para baixar o binário da plataforma; é usado pelo
-# drizzle-kit e pelo vitest. Aprovado explicitamente, e só ele.
+# drizzle-kit. Aprovado explicitamente, e só ele.
 allowBuilds:
   esbuild: true
+  # Vem como dependência transitiva do toolchain do Next. O Next usa o @next/swc
+  # com binário pré-compilado, então o postinstall daqui não é necessário —
+  # negado explicitamente em vez de deixar o aviso pendurado.
+  '@swc/core': false
 
-minimumReleaseAgeExclude:
-  - '@better-auth/drizzle-adapter@1.7.3'
-  - better-auth@1.7.3
+# NÃO adicione minimumReleaseAgeExclude aqui.
+#
+# O pnpm 12 recusa pacote publicado nas últimas horas — a janela em que
+# comprometimento de pacote costuma ser descoberto. O `pnpm add` sugere criar
+# uma exclusão quando isso acontece; aceitar a sugestão anula a proteção.
+#
+# O certo é fixar uma versão mais velha, como fizemos com better-auth@1.7.2.
+# Ver ADR-0033 e DECISOES-DE-DEPENDENCIA.md.

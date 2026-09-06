@@ -1,3 +1,3 @@
-export * from "./centavos.js";
-export * from "./ledger.js";
-export * from "./encargos.js";
+export * from "./centavos.ts";
+export * from "./ledger.ts";
+export * from "./encargos.ts";

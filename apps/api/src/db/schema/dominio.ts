@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -13,6 +14,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -99,6 +101,17 @@ export const storeMembers = pgTable(
       to: "narua_app",
       using: ehMembro,
     }),
+    // Só o dono mexe na equipe.
+    pgPolicy("store_members_insert", {
+      for: "insert",
+      to: "narua_app",
+      withCheck: sql`(select private.has_store_role(${sql.raw("store_id")}, 'dono'))`,
+    }),
+    pgPolicy("store_members_delete", {
+      for: "delete",
+      to: "narua_app",
+      using: sql`(select private.has_store_role(${sql.raw("store_id")}, 'dono'))`,
+    }),
   ],
 ).enableRLS();
 
@@ -171,6 +184,8 @@ export const accounts = pgTable(
       sql`(kind = 'receivable' and customer_id is not null)
        or (kind <> 'receivable' and customer_id is null)`,
     ),
+    // Alvo da FK composta em ledger_entries. Ver o comentário lá.
+    unique("accounts_id_store_uk").on(t.id, t.storeId),
     pgPolicy("accounts_select", { for: "select", to: "narua_app", using: ehMembro }),
     pgPolicy("accounts_insert", { for: "insert", to: "narua_app", withCheck: ehMembro }),
   ],
@@ -199,6 +214,7 @@ export const ledgerTransactions = pgTable(
     index("ledger_tx_store_data_idx").on(t.storeId, t.ocorridoEm.desc()),
     // Fiado é registro de fato ocorrido. Data futura não existe.
     check("sem_data_futura", sql`${t.ocorridoEm} <= current_date`),
+    unique("ledger_tx_id_store_uk").on(t.id, t.storeId),
     pgPolicy("ledger_tx_select", { for: "select", to: "narua_app", using: ehMembro }),
     pgPolicy("ledger_tx_insert", { for: "insert", to: "narua_app", withCheck: ehMembro }),
     // Sem policy de UPDATE/DELETE: o verbo é revogado e o trigger bloqueia.
@@ -209,15 +225,11 @@ export const ledgerEntries = pgTable(
   "ledger_entries",
   {
     id: text("id").primaryKey(),
-    transactionId: text("transaction_id")
-      .notNull()
-      .references(() => ledgerTransactions.id),
+    transactionId: text("transaction_id").notNull(),
     storeId: text("store_id")
       .notNull()
       .references(() => stores.id, { onDelete: "cascade" }),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id),
+    accountId: text("account_id").notNull(),
     direcao: entryDirection("direcao").notNull(),
     // bigint em centavos. Nunca float. Ver ADR-0005.
     valorCentavos: bigint("valor_centavos", { mode: "number" }).notNull(),
@@ -227,6 +239,34 @@ export const ledgerEntries = pgTable(
     index("ledger_entries_store_conta_idx").on(t.storeId, t.accountId),
     index("ledger_entries_tx_idx").on(t.transactionId),
     check("valor_positivo", sql`${t.valorCentavos} > 0`),
+    /*
+      FKs COMPOSTAS, incluindo store_id.
+
+      Com FKs simples (account_id -> accounts.id), a loja A conseguia gravar um
+      lançamento contra a conta a receber da loja B. A policy de INSERT só olha
+      `store_id`, e a checagem de integridade referencial do Postgres IGNORA RLS
+      por definição — é a armadilha nº 7 documentada em
+      docs/04-arquitetura/05-seguranca-e-multi-tenancy.md.
+
+      A linha não vazava para tela nenhuma (a RLS derruba o join dos dois lados),
+      mas ficava gravada, e uma leitura sem RLS — migração, job, pg_dump, backup
+      restaurado — mostraria o freguês de uma loja sob o store_id de outra. É
+      violação da invariante I5, e o valor sumia de I4: não entrava no saldo de
+      ninguém.
+
+      Encontrado pela suíte pgTAP antes de existir usuário. Era exatamente para
+      isso que ela foi escrita.
+    */
+    foreignKey({
+      columns: [t.accountId, t.storeId],
+      foreignColumns: [accounts.id, accounts.storeId],
+      name: "ledger_entries_conta_da_mesma_loja_fk",
+    }),
+    foreignKey({
+      columns: [t.transactionId, t.storeId],
+      foreignColumns: [ledgerTransactions.id, ledgerTransactions.storeId],
+      name: "ledger_entries_tx_da_mesma_loja_fk",
+    }),
     pgPolicy("ledger_entries_select", { for: "select", to: "narua_app", using: ehMembro }),
     pgPolicy("ledger_entries_insert", {
       for: "insert",

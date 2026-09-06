@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { centavos } from "./centavos.js";
+import { centavos } from "./centavos.ts";
 import {
   EncargoInvalidoError,
   MULTA_MAXIMA_BP,
   SEM_ENCARGOS,
   calcularEncargos,
   validarEncargos,
-} from "./encargos.js";
+} from "./encargos.ts";
 
 describe("I7 · multa nunca passa de 2%", () => {
   it("aceita exatamente o teto", () => {

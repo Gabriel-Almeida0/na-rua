@@ -6,7 +6,7 @@
  * Os pontos abertos estão em docs/06-compliance/01-requisitos-de-conformidade.md.
  */
 
-import { type Centavos, centavos } from "./centavos.js";
+import { type Centavos, centavos } from "./centavos.ts";
 
 /** Teto de multa de mora: 2% da prestação. CDC art. 52, §1º. */
 export const MULTA_MAXIMA_BP = 200; // basis points

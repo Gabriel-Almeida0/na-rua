@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centavos } from "./centavos.js";
+import { centavos } from "./centavos.ts";
 import {
   type ContasDaLoja,
   type Lancamento,
@@ -10,7 +10,7 @@ import {
   estornar,
   receberPagamento,
   validarPartidaDobrada,
-} from "./ledger.js";
+} from "./ledger.ts";
 
 const contas: ContasDaLoja = {
   receivableDoCliente: "conta-maria",

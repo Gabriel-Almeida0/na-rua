@@ -5,7 +5,7 @@ import {
   centavosDeTexto,
   formatar,
   formatarSemSimbolo,
-} from "./centavos.js";
+} from "./centavos.ts";
 
 describe("centavos", () => {
   it("rejeita não-inteiro — dinheiro fracionado não existe", () => {

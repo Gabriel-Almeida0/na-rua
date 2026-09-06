@@ -6,15 +6,40 @@
 </p>
 
 <p align="center">
-  <img alt="status" src="https://img.shields.io/badge/status-arquitetura%20e%20documenta%C3%A7%C3%A3o-0B5FFF">
+  <img alt="status" src="https://img.shields.io/badge/status-fatia%20vertical%20funcionando-1B5E20">
   <img alt="licença" src="https://img.shields.io/badge/licen%C3%A7a-MIT-1B5E20">
-  <img alt="docs" src="https://img.shields.io/badge/documentos-40-C62828">
-  <img alt="adrs" src="https://img.shields.io/badge/ADRs-29-B45309">
+  <img alt="docs" src="https://img.shields.io/badge/documentos-45-C62828">
+  <img alt="adrs" src="https://img.shields.io/badge/ADRs-34-B45309">
 </p>
 
 ---
 
-> **Estado do projeto:** este repositório contém a **arquitetura e a documentação completas** do produto — pesquisa de mercado, pesquisa de UX, análise regulatória, arquitetura técnica e 29 ADRs. **O código ainda não foi escrito.** Cada decisão aqui está fundamentada em fonte citada, e cada lacuna está marcada como lacuna.
+> **Estado do projeto:** a fatia vertical de "anotar fiado" está **funcionando de ponta a ponta** — PWA offline, API e Postgres com isolamento por RLS. A documentação que veio antes do código continua aqui: pesquisa de mercado, pesquisa de UX, análise regulatória e 34 ADRs. Cada decisão tem fonte citada, e cada lacuna está marcada como lacuna.
+
+## Rodando
+
+```bash
+corepack enable                 # pnpm vem do campo packageManager
+pnpm install
+pnpm db:up                      # Postgres 17 + pgTAP no Docker
+pnpm db:migrate
+pnpm dev                        # API em :3333, PWA em :3000
+```
+
+Verificação completa:
+
+```bash
+pnpm verificar                  # typecheck + testes + pgTAP + build com orçamento
+pnpm e2e                        # fluxo de ponta a ponta contra o banco real
+```
+
+| Camada | O que roda | Estado |
+|---|---|---|
+| Domínio | 44 testes em Vitest | verde |
+| Banco | 127 asserções pgTAP: RLS, papéis, append-only, invariantes | verde |
+| API | 24 verificações de ponta a ponta contra o Postgres | verde |
+| PWA | offline, outbox e sincronização verificados no navegador | verde |
+| Orçamento | 168,8 KB de JS na primeira carga, teto de 170 KB | verde, com 1,2 KB de folga |
 
 ## O problema
 
@@ -129,7 +154,7 @@ CRDTs garantem convergência. **Não garantem invariantes.** A solução certa �
 ### ⚖️ Decisões e conformidade
 | | |
 |---|---|
-| **[29 ADRs](docs/05-adr/)** | Cada decisão com contexto, alternativas rejeitadas e consequências |
+| **[34 ADRs](docs/05-adr/)** | Cada decisão com contexto, alternativas rejeitadas e consequências |
 | [Pesquisa regulatória](docs/06-compliance/00-pesquisa-regulatoria.md) | LGPD, CDC, BCB, Meta — com texto literal de lei |
 | [Requisitos de conformidade](docs/06-compliance/01-requisitos-de-conformidade.md) | O que o software DEVE e NÃO DEVE fazer |
 
@@ -141,13 +166,17 @@ CRDTs garantem convergência. **Não garantem invariantes.** A solução certa �
 Front / PWA     Next.js 16.3 · React 19.2 · TypeScript · Tailwind CSS 4
                 Serwist 9.5 (next-pwa está morto desde 2022)
 Estado local    Dexie 4.4 (IndexedDB) + outbox próprio · ULID no cliente
-Backend         Supabase (PostgreSQL 17) · shared schema + tenant_id + RLS
+API             Fastify 5.12 · Better Auth 1.7.2
+Banco           PostgreSQL 17 auto-hospedado · shared schema + store_id + RLS
 ORM             Drizzle 0.45.2 — linha estável, não os RCs do v1
 Validação       Zod 4 (o único com i18n oficial em pt-BR)
-Testes          Vitest 5 · Playwright · pgTAP para RLS · Testcontainers
-Observabilidade Sentry · PostHog (session replay) · Axiom
+Testes          Vitest 4 · pgTAP · Playwright
+Runtime         Node 22 · pnpm 12
 Integrações     Pix direto na chave do lojista · WhatsApp via wa.me
 ```
+
+Por que Vitest 4 e não 5, por que pnpm e não npm, e por que o `better-auth`
+está fixado numa versão exata: [DECISOES-DE-DEPENDENCIA.md](DECISOES-DE-DEPENDENCIA.md).
 
 **Orçamento de performance:** JS ≤ 170 KB comprimido · INP ≤ 200 ms · LCP ≤ 2,5 s · **0 KB de fonte web**
 **Custo de infraestrutura:** R$ 0 na fase de portfólio

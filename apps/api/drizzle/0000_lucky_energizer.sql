@@ -9,6 +9,7 @@ CREATE TABLE "accounts" (
 	"kind" "account_kind" NOT NULL,
 	"customer_id" text,
 	"debit_normal" boolean NOT NULL,
+	CONSTRAINT "accounts_id_store_uk" UNIQUE("id","store_id"),
 	CONSTRAINT "receivable_tem_cliente" CHECK ((kind = 'receivable' and customer_id is not null)
        or (kind <> 'receivable' and customer_id is null))
 );
@@ -56,6 +57,7 @@ CREATE TABLE "ledger_transactions" (
 	"created_by" text NOT NULL,
 	"device_id" text,
 	"criado_em" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ledger_tx_id_store_uk" UNIQUE("id","store_id"),
 	CONSTRAINT "sem_data_futura" CHECK ("ledger_transactions"."ocorrido_em" <= current_date)
 );
 --> statement-breakpoint
@@ -88,9 +90,9 @@ ALTER TABLE "stores" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_transaction_id_ledger_transactions_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."ledger_transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_conta_da_mesma_loja_fk" FOREIGN KEY ("account_id","store_id") REFERENCES "public"."accounts"("id","store_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_tx_da_mesma_loja_fk" FOREIGN KEY ("transaction_id","store_id") REFERENCES "public"."ledger_transactions"("id","store_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ledger_transactions" ADD CONSTRAINT "ledger_transactions_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "store_members" ADD CONSTRAINT "store_members_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "accounts_store_kind_idx" ON "accounts" USING btree ("store_id","kind");--> statement-breakpoint
@@ -112,5 +114,7 @@ CREATE POLICY "ledger_entries_insert" ON "ledger_entries" AS PERMISSIVE FOR INSE
 CREATE POLICY "ledger_tx_select" ON "ledger_transactions" AS PERMISSIVE FOR SELECT TO "narua_app" USING ((select private.has_store_role(store_id, 'balconista')));--> statement-breakpoint
 CREATE POLICY "ledger_tx_insert" ON "ledger_transactions" AS PERMISSIVE FOR INSERT TO "narua_app" WITH CHECK ((select private.has_store_role(store_id, 'balconista')));--> statement-breakpoint
 CREATE POLICY "store_members_select" ON "store_members" AS PERMISSIVE FOR SELECT TO "narua_app" USING ((select private.has_store_role(store_id, 'balconista')));--> statement-breakpoint
+CREATE POLICY "store_members_insert" ON "store_members" AS PERMISSIVE FOR INSERT TO "narua_app" WITH CHECK ((select private.has_store_role(store_id, 'dono')));--> statement-breakpoint
+CREATE POLICY "store_members_delete" ON "store_members" AS PERMISSIVE FOR DELETE TO "narua_app" USING ((select private.has_store_role(store_id, 'dono')));--> statement-breakpoint
 CREATE POLICY "stores_select" ON "stores" AS PERMISSIVE FOR SELECT TO "narua_app" USING ((select private.has_store_role(id, 'balconista')));--> statement-breakpoint
 CREATE POLICY "stores_update" ON "stores" AS PERMISSIVE FOR UPDATE TO "narua_app" USING ((select private.has_store_role(id, 'dono'))) WITH CHECK ((select private.has_store_role(id, 'dono')));
