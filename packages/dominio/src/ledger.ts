@@ -33,16 +33,19 @@ export interface Transacao {
 }
 
 export class PartidaDobradaError extends Error {
-  constructor(
-    readonly transacaoId: string,
-    readonly debitos: number,
-    readonly creditos: number,
-  ) {
+  readonly transacaoId: string;
+  readonly debitos: number;
+  readonly creditos: number;
+
+  constructor(transacaoId: string, debitos: number, creditos: number) {
     super(
       `Partida dobrada violada na transação ${transacaoId}: ` +
         `débitos=${debitos} créditos=${creditos}`,
     );
     this.name = "PartidaDobradaError";
+    this.transacaoId = transacaoId;
+    this.debitos = debitos;
+    this.creditos = creditos;
   }
 }
 

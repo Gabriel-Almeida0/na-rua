@@ -114,3 +114,66 @@ from public.v_saldos
 group by store_id;
 
 grant select on public.v_saldos, public.v_total_na_rua to narua_app;
+
+-- ---------------------------------------------------------------------------
+-- 6. Criação de loja: o único ovo-e-galinha do sistema.
+--
+--    A policy de INSERT em `stores` exigiria que o usuário já fosse membro da
+--    loja que ele está criando. Impossível por construção.
+--
+--    Em vez de furar a RLS no código da aplicação — onde qualquer descuido
+--    futuro viraria vazamento — a exceção fica AQUI, numa função estreita:
+--    ela cria a loja e imediatamente torna o CHAMADOR o dono. Não aceita
+--    user_id como parâmetro, então não dá para usá-la para colocar outra
+--    pessoa numa loja.
+-- ---------------------------------------------------------------------------
+create or replace function private.criar_loja(
+  _nome                  text,
+  _chave_pix             text default null,
+  _documento             text default null,
+  _endereco              text default null,
+  _dia_vencimento_padrao smallint default null,
+  _id                    text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user  text := private.current_user_id();
+  v_store text := coalesce(_id, gen_random_uuid()::text);
+begin
+  if v_user is null then
+    raise exception 'sem contexto de usuário: app.user_id não foi definido'
+      using errcode = '42501';
+  end if;
+  if _nome is null or btrim(_nome) = '' then
+    raise exception 'a loja precisa de um nome' using errcode = '22023';
+  end if;
+
+  insert into public.stores
+    (id, nome, chave_pix, documento, endereco, dia_vencimento_padrao)
+  values
+    (v_store, btrim(_nome), _chave_pix, _documento, _endereco, _dia_vencimento_padrao);
+
+  insert into public.store_members (store_id, user_id, role)
+  values (v_store, v_user, 'dono');
+
+  return v_store;
+end;
+$$;
+
+revoke all on function private.criar_loja(text, text, text, text, smallint, text) from public;
+grant execute on function private.criar_loja(text, text, text, text, smallint, text) to narua_app;
+
+-- Gerenciar equipe: o dono pode adicionar e remover membros da própria loja.
+drop policy if exists store_members_insert on public.store_members;
+create policy store_members_insert on public.store_members
+  for insert to narua_app
+  with check ((select private.has_store_role(store_id, 'dono')));
+
+drop policy if exists store_members_delete on public.store_members;
+create policy store_members_delete on public.store_members
+  for delete to narua_app
+  using ((select private.has_store_role(store_id, 'dono')));

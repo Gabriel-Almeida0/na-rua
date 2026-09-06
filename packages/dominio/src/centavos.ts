@@ -15,9 +15,12 @@ declare const marca: unique symbol;
 export type Centavos = number & { readonly [marca]: "Centavos" };
 
 export class ValorInvalidoError extends Error {
-  constructor(motivo: string, readonly entrada: unknown) {
+  readonly entrada: unknown;
+
+  constructor(motivo: string, entrada: unknown) {
     super(`Valor monetário inválido: ${motivo}`);
     this.name = "ValorInvalidoError";
+    this.entrada = entrada;
   }
 }
 

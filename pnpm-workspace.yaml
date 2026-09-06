@@ -6,8 +6,6 @@ packages:
 # O esbuild precisa do dele para baixar o binário da plataforma; é usado pelo
 # drizzle-kit e pelo vitest. Aprovado explicitamente, e só ele.
 allowBuilds:
-  '@prisma/client': set this to true or false
-  better-sqlite3: set this to true or false
   esbuild: true
 
 minimumReleaseAgeExclude:
